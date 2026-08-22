@@ -61,7 +61,7 @@ def depth_buckets(b, n_bins=5):
                      "beta_x_depth": beta * grp["depth"].mean(), "n": len(grp)})
     return pd.DataFrame(rows)
 
-def cost_check(b, res, tick=0.1, fee_ticks=0.0, train_frac=0.7):
+def cost_check(b, res, tick=0.01, fee_ticks=0.0, train_frac=0.7):
     d = b.dropna(subset=["ofi", "d_mid_next", "spread"])
     test = d.iloc[int(len(d) * train_frac):]
     side = np.sign(res["beta"] * test["ofi"])
