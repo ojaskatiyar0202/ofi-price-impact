@@ -105,7 +105,6 @@ of this kind is not freely available.
 
     code/model.py       imbalance, bucketing, regression, depth quintiles
     code/analysis.py    data loading and the runs that produce the tables
-    tests/test_ofi.py   tests
 
 ## Running it
 
