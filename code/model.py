@@ -60,3 +60,14 @@ def depth_buckets(b, n_bins=5):
         rows.append({"bin": i, "mean_depth": grp["depth"].mean(), "beta": beta,
                      "beta_x_depth": beta * grp["depth"].mean(), "n": len(grp)})
     return pd.DataFrame(rows)
+
+def cost_check(b, res, tick=0.1, fee_ticks=0.0, train_frac=0.7):
+    d = b.dropna(subset=["ofi", "d_mid_next", "spread"])
+    test = d.iloc[int(len(d) * train_frac):]
+    side = np.sign(res["beta"] * test["ofi"])
+    traded = side != 0
+    realised = test["d_mid_next"][traded]
+    gross = (side[traded] * realised).mean()
+    cost = test["spread"][traded].mean() + 2 * fee_ticks
+    return {"n_trades": int(traded.sum()), "hit_rate": float((side[traded] * realised > 0).mean()),
+            "gross_ticks": float(gross), "cost_ticks": float(cost), "net_ticks": float(gross - cost)}
