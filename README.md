@@ -12,18 +12,18 @@ rather than from trades. A cancelled order removes liquidity exactly as a trade
 does, and from the book's perspective the two are indistinguishable, so a measure
 built on trades alone misses most of what happens in an electronic market.
 
-For each update to the top of book the contribution is
+For each update to the top of book, the contribution is
 
     e_n =  1{P_bid_n >= P_bid_n-1} * q_bid_n  -  1{P_bid_n <= P_bid_n-1} * q_bid_n-1
          - 1{P_ask_n <= P_ask_n-1} * q_ask_n  +  1{P_ask_n >= P_ask_n-1} * q_ask_n-1
 
 The inequalities are weak, which allows one expression to handle three cases.
-When the bid price does not change, both bid indicators fire and the expression
-reduces to the change in resting size. When the bid improves, only the first
+When the bid price does not change, both bid indicators trigger, and the expression
+reduces to the change in the size of the ask prices. When the bid improves, only the first
 fires and the whole new size counts as inflow, since the previous level has not
 disappeared but has stopped being the best. When the bid falls, only the second
-fires and the whole old size counts as outflow. The ask terms carry the opposite
-sign because supply at the ask pushes the price down.
+term remains, and so the whole old size counts as outflow. The ask terms carry the opposite
+sign because more supply at the ask price pushes the price down.
 
 Summing e_n over an interval gives the imbalance for that interval. The paper
 finds that the midprice change over the interval is close to linear in it, with a
@@ -84,22 +84,20 @@ of this kind is not freely available.
 ## Results
 
 | Bucket | Buckets | Contemporaneous R2 in | Contemporaneous R2 out | Predictive R2 out | Predictive t |
-|---|---|---|---|---|---|
-| 1s | | | | | |
-| 10s | | | | | |
-| 30s | | | | | |
-
-**Discussion.** [To fill.]
+|---|---:|---:|---:|---:|---:|
+| 1s | 86,396 | 0.5739 | 0.5957 | 0.0372 | 30.67 |
+| 10s | 8,639 | 0.7116 | 0.7244 | 0.0054 | 3.81 |
+| 30s | 2,879 | 0.7042 | 0.7317 | -0.0040 | 0.90 |
 
 ### Depth quintiles
 
 | Quintile | Mean depth | Slope | Slope x depth | Buckets |
-|---|---|---|---|---|
-| 0 | | | | |
-| 1 | | | | |
-| 2 | | | | |
-| 3 | | | | |
-| 4 | | | | |
+|---|---:|---:|---:|---:|
+| 0 | 3.156 | 11.144 | 35.171 | 1,728 |
+| 1 | 4.080 | 9.478 | 38.668 | 1,728 |
+| 2 | 4.735 | 7.785 | 36.865 | 1,727 |
+| 3 | 5.465 | 7.221 | 39.463 | 1,728 |
+| 4 | 8.126 | 6.241 | 50.714 | 1,728 |
 
 **Discussion.** [To fill.]
 
@@ -121,11 +119,8 @@ Run from the repository root, since the data and results paths are relative to i
 
 ## Limitations
 
-The cost comparison is not implemented. The predictive regression is reported,
-but gross edge is not measured against the round trip spread, so that part of the
-question is currently addressed in prose only.
 
-Only level one is used, so imbalance deeper in the book is invisible. A large
+Imbalance deeper in the book is invisible; that is to say, a large
 order sitting behind the touch changes how the price responds and does not appear
 in this data. The data also reports total size at each level rather than the
 number of orders composing it, so a level held by one participant and one held by
