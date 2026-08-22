@@ -1,120 +1,152 @@
-# Order flow imbalance and price impact
+# Order flow imbalance and short-horizon price impact
 
-A replication of Cont, Kukanov and Stoikov (2014), *The Price Impact of Order Book
-Events*, extended with the question the paper does not ask: once you account for
-the spread, is any of this tradeable.
+We replicate Cont, Kukanov and Stoikov (2014) and then ask the question the paper
+does not: whether the relationship it documents is of any use to someone trying
+to trade on it.
 
-## The question
+## The problem
 
-Order flow imbalance (OFI) aggregates changes at the top of the book into a single
-signed number per interval. The paper's central claim is that midprice changes are
-close to linear in OFI, with a slope that scales roughly like one over average
-depth. That result is *contemporaneous*: it explains moves using flow measured
-over the same interval.
+Order flow imbalance measures the net pressure at the top of the book over some
+interval. It is built from changes in the size resting at the best bid and ask
+rather than from trades, because a cancelled order removes liquidity exactly as a
+trade does, and from the book's perspective the two are indistinguishable. Trade
+data misses cancellations entirely, and in an electronic market most orders are
+cancelled rather than filled.
 
-Two things follow that the paper leaves implicit, and both are the point of this
-repo.
+For each update to the top of book the contribution is
 
-1. A contemporaneous R² is not a forecast. By the time OFI over interval *k* is
-   observable, the move over interval *k* has happened. The tradeable question is
-   whether OFI over *k* says anything about interval *k+1*.
-2. Even a real forecast has to clear the round-trip cost of crossing the spread
-   twice. A signal worth a fraction of a tick against a one-tick spread is not a
-   strategy.
+    e_n =  1{P_bid_n >= P_bid_n-1} * q_bid_n  -  1{P_bid_n <= P_bid_n-1} * q_bid_n-1
+         - 1{P_ask_n <= P_ask_n-1} * q_ask_n  +  1{P_ask_n >= P_ask_n-1} * q_ask_n-1
 
-So three regressions get run and reported side by side, and the cost check is
-applied to the predictive one.
+The inequalities are weak, and this is what allows one expression to handle three
+cases. When the bid price does not change, both bid indicators fire and the
+expression reduces to the change in resting size. When the bid improves, only the
+first fires and the whole new size counts as inflow, which is correct because the
+previous level has not disappeared, it has merely stopped being the best. When
+the bid falls, only the second fires and the whole old size counts as outflow.
+The ask terms carry the opposite sign because supply at the ask pushes the price
+down.
+
+Summing e_n over an interval gives the imbalance for that interval. The paper's
+claim is that the midprice change over the interval is close to linear in it,
+with a slope that scales like one over the average depth.
+
+## Contemporaneous is not predictive
+
+The paper's regression measures flow and price change over the same interval. It
+is therefore a description of what happened rather than a forecast, since by the
+time the imbalance is observable the move has already occurred.
+
+The tradeable question is whether imbalance over interval k says anything about
+interval k+1. We run both regressions and report them together, because a high
+contemporaneous R-squared presented on its own would be misleading.
+
+There is a second hurdle beyond the statistical one. The midprice is a computed
+reference and not a price anyone will trade at, so a strategy acting on a
+predicted mid move must buy at the ask and sell at the bid, paying the full
+spread on a round trip. A prediction of two ticks against a two tick spread
+breaks even no matter how accurate it was.
 
 ## Method
 
-- Reconstruct top of book from message data into a canonical frame:
-  `ts, bid_px, bid_sz, ask_px, ask_sz`, one row per change at the touch.
-- Compute the per-event contribution `e_n` exactly as in the paper. Weak
-  inequalities matter: unchanged bid price collapses to the change in resting
-  size, an improving bid counts the whole new size as inflow, a falling bid
-  counts the whole old size as outflow.
-- Sum `e_n` into fixed clock buckets. Measure midprice change in ticks from
-  end-of-bucket mid to end-of-bucket mid.
-- Fit OLS with White HC0 standard errors, split by time with no shuffling.
-  Out-of-sample R² applies train coefficients to the held-out block and measures
-  against the test mean, so a useless model scores at or below zero.
-- Refit inside depth quintiles to test the one-over-depth scaling claim.
-- Take the predictive fit at face value, trade its sign on the test block, and
-  compare gross edge in ticks against spread plus fees.
+Top of book is reconstructed into one row per change, with columns for the bid
+and ask price and the size resting at each. We sum e_n into fixed clock buckets
+and measure the midprice change in ticks from the end of one bucket to the end of
+the next. Prices are expressed in ticks throughout so that the price move and the
+cost of crossing the spread are directly comparable.
+
+The regression is ordinary least squares with White standard errors, since
+bucketed order flow is strongly heteroskedastic and a bucket containing six
+hundred events behaves very differently from one containing twenty. The split is
+time ordered with no shuffling, and the out-of-sample R-squared applies the
+coefficients fitted on the training block to the test block and measures against
+the test block's own mean. A model with no predictive content therefore scores at
+or below zero rather than merely close to it.
+
+To test the depth claim we refit within depth quintiles. If impact scales like
+one over depth then the slope should fall as depth rises while the product of
+slope and depth stays roughly flat.
+
+Bucket length is a free parameter and the reported R-squared moves with it, so we
+run 1s, 10s and 30s and report all three rather than the most flattering one.
+
+## Data
+
+Results below are from Binance BTCUSDT perpetual futures bookTicker for
+30 March 2024, obtained from
+
+    data.binance.vision/?prefix=data/futures/um/daily/bookTicker/BTCUSDT/
+
+The file is 84 MB compressed and is not committed. Download it, unzip into
+`data/`, and `analysis.py` runs unchanged. The tick size for this contract is
+0.10 rather than the 0.01 typical of an equity, and `make_buckets` is called
+accordingly.
+
+Binance publishes bookTicker only for futures and not for spot, and the daily
+archives stop partway through 2024. The paper studies US equities, where order
+book data of this kind is not freely available.
+
+## Results
+
+| Bucket | Buckets | Contemporaneous R2 in | Contemporaneous R2 out | Predictive R2 out | Predictive t |
+|---|---|---|---|---|---|
+| 1s | | | | | |
+| 10s | | | | | |
+| 30s | | | | | |
+
+**Discussion.** [To fill.]
+
+### Depth quintiles
+
+| Quintile | Mean depth | Slope | Slope x depth | Buckets |
+|---|---|---|---|---|
+| 0 | | | | |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
+| 4 | | | | |
+
+**Discussion.** [To fill.]
+
+## Files
+
+    code/model.py       imbalance, bucketing, regression, depth quintiles
+    code/analysis.py    data loading and the runs that produce the tables
+    tests/test_ofi.py   tests
 
 ## Running it
 
 ```bash
 pip install -r requirements.txt
-pytest tests/ -q                      # 11 tests pinning the OFI definition
-python -m src.run --source synthetic  # end-to-end check, no data needed
+python code/analysis.py
+pytest tests/ -q
 ```
 
-Real data:
+Run from the repository root, since the data and results paths are relative to it.
 
-```bash
-python -m src.run --source binance --path data/BTCUSDT-bookTicker-2026-01-05.csv --tick-size 0.01
-python -m src.run --source lobster --path data/AAPL_2026-01-05 --date 2026-01-05
-```
+## Limitations
 
-`--freq` sets bucket length and matters a lot. Start at `10s`, then check `1s` and
-`30s`, because the reported R² is partly an artefact of bucket choice.
+The model has no cost check yet. The predictive regression is reported, but the
+comparison of gross edge against the round trip spread is not implemented, so the
+second argument above is currently made in prose rather than in numbers.
 
-## Data
+Only level one is used, so imbalance deeper in the book is invisible. A large
+order sitting behind the touch changes how the price responds and does not appear
+in this data at all. The data also reports total size at each level rather than
+the number of orders composing it, so a level held by one participant and one
+held by fifty look identical.
 
-Nothing is committed. Two free sources work out of the box.
+Buckets are fixed in clock time rather than in event count, so a quiet minute and
+a busy one carry equal weight in the regression despite containing very different
+amounts of information.
 
-- **LOBSTER** publishes a free sample of message and orderbook files for a few
-  US names. Level 1 is enough here.
-- **Binance** publishes `bookTicker` archives at `data.binance.vision`, one row
-  per best bid or ask change, no API key. Confirm the path for your symbol and
-  date before scripting a bulk pull, the layout has changed before.
-
-A synthetic book simulator is included so the code can be exercised without any
-download. **Numbers from synthetic data describe the simulator, not a market.**
-They belong nowhere near the results table below.
-
-## Results
-
-Empty until run on real data. Fill from `results/summary_*.json`.
-
-| Regression | beta | t | R² in | R² out |
-|---|---|---|---|---|
-| Contemporaneous, raw OFI | | | | |
-| Contemporaneous, OFI / depth | | | | |
-| Predictive, raw OFI | | | | |
-| Predictive, OFI / depth | | | | |
-
-Depth scaling. If the paper's claim holds, `beta` falls across quintiles while
-`beta × depth` stays roughly flat.
-
-| Depth quintile | Mean depth | beta | beta × depth |
-|---|---|---|---|
-| | | | |
-
-Cost check on the predictive fit, test block only.
-
-| Metric | Value |
-|---|---|
-| Trades | |
-| Hit rate | |
-| Gross edge (ticks) | |
-| Round-trip cost (ticks) | |
-| Net edge (ticks) | |
-
-## What did not work
-
-Fill in honestly as you go. Candidates from the design:
-
-- Contemporaneous R² is high and means nothing for trading. Worth stating plainly
-  because the gap between the two numbers is the whole finding.
-- Predictive R² is expected to be near zero at 10s buckets on liquid names.
-- Net of a one-tick round trip, a sub-tick gross edge is dead. Record the number
-  rather than burying it.
-- Bucket length is a free parameter and the headline R² moves with it. Note the
-  sensitivity instead of reporting the flattering choice.
+The instrument is a crypto perpetual future rather than a US equity. There is no
+opening or closing auction, trading runs continuously, and the funding mechanism
+that keeps the contract near spot has no equity analogue. The magnitudes here are
+therefore not directly comparable to the published figures even where the
+qualitative result holds.
 
 ## Reference
 
-Cont, R., Kukanov, A. and Stoikov, S. (2014). The Price Impact of Order Book
-Events. *Journal of Financial Econometrics*, 12(1), 47–88.
+Cont, R., Kukanov, A. and Stoikov, S. (2014). The price impact of order book
+events. *Journal of Financial Econometrics*, 12(1), 47-88.
