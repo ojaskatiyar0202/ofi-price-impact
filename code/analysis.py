@@ -1,40 +1,68 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
 import numpy as np
 import pandas as pd
-from model import make_buckets, fit, depth_buckets, cost_check
-def load_binance(path):
-    df = pd.read_csv(path)
-    out = pd.DataFrame({"ts": pd.to_datetime(df["transaction_time"], unit="ms"),
-                        "bid_px": df["best_bid_price"].astype(float),
-                        "bid_sz": df["best_bid_qty"].astype(float),
-                        "ask_px": df["best_ask_price"].astype(float),
-                        "ask_sz": df["best_ask_qty"].astype(float)})
-    out = out.sort_values("ts")
-    return out[out["bid_px"] < out["ask_px"]].reset_index(drop=True)
-os.makedirs("results", exist_ok=True)
+import statsmodels.api as sm
+def ofi_events(bid_px, bid_sz, ask_px, ask_sz):
+    e = np.zeros(len(bid_px))
+    e[1:] = ((bid_px[1:] >= bid_px[:-1]) * bid_sz[1:]
+             - (bid_px[1:] <= bid_px[:-1]) * bid_sz[:-1]
+             - (ask_px[1:] <= ask_px[:-1]) * ask_sz[1:]
+             + (ask_px[1:] >= ask_px[:-1]) * ask_sz[:-1])
+    return e
 
-book = load_binance("data/BTCUSDT-bookTicker-2024-03-30.csv")
+def make_buckets(df, freq="10s", tick=0.1):
+    e = ofi_events(df["bid_px"].to_numpy(float),
+                   df["bid_sz"].to_numpy(float),
+                   df["ask_px"].to_numpy(float),
+                   df["ask_sz"].to_numpy(float))
+    df = df.copy()
+    df["e"] = e
+    df["mid"] = (df["bid_px"] + df["ask_px"]) / 2
+    df["depth"] = (df["bid_sz"] + df["ask_sz"]) / 2
+    df["spread"] = (df["ask_px"] - df["bid_px"]) / tick
+    g = df.resample(freq, on="ts")
+    out = pd.DataFrame({ "ofi":    g["e"].sum(), "mid":    g["mid"].last(), "depth":  g["depth"].mean(),
+     "spread": g["spread"].mean(), "n":      g["e"].size(),}) 
+    out = out[out["n"] > 0]
+    out["d_mid"] = out["mid"].diff() / tick
+    out["d_mid_next"] = out["d_mid"].shift(-1)
+    return out.dropna(subset=["d_mid"])
 
-print(len(book), "updates")
+def r_squared(y, y_hat):
+    ss_res = ((y - y_hat)**2).sum()
+    ss_tot = ((y - y.mean())**2).sum()
+    return 1 - ss_res / ss_tot
 
+def fit(x, y, train_frac=0.7):
+    d = pd.concat([x.rename("x"), y.rename("y")], axis=1).dropna()
+    cut = int(len(d) * train_frac)
+    train, test = d.iloc[:cut], d.iloc[cut:]
+    res = sm.OLS(train["y"], sm.add_constant(train["x"])).fit(cov_type="HC0")
+    alpha, beta = res.params
+    standard_error = res.bse.iloc[1]
+    pred = alpha + beta * test["x"]
+    return {"beta": beta, "se": standard_error, "t": beta / standard_error, "r2_in": res.rsquared,
+            "r2_out": r_squared(test["y"], pred), "n_train": len(train), "n_test": len(test)}
 
-rows = []
-for freq in ["1s", "10s", "30s"]:
-    b = make_buckets(book, freq=freq, tick=0.1)
-    contemp = fit(b["ofi"], b["d_mid"])
-    predict = fit(b["ofi"], b["d_mid_next"])
-    costs = cost_check(b, predict)
-    rows.append({"freq": freq, "n_buckets": len(b), "contemp_r2_in": contemp["r2_in"], 
-                 "contemp_r2_out": contemp["r2_out"], "predict_r2_out": predict["r2_out"], "predict_t": predict["t"],
-                 "hit_rate": costs["hit_rate"], "gross_ticks": costs["gross_ticks"],
-                 "cost_ticks": costs["cost_ticks"], "net_ticks": costs["net_ticks"]})
+def depth_buckets(b, n_bins=5):
+    d = b.dropna(subset=["ofi", "d_mid", "depth"]).copy()
+    d["bin"] = pd.qcut(d["depth"], n_bins, labels=False)
+    rows = []
+    for i, grp in d.groupby("bin"):
+        res = sm.OLS(grp["d_mid"], sm.add_constant(grp["ofi"])).fit(cov_type="HC0")
+        beta = res.params.iloc[1]
+        rows.append({"bin": i, "mean_depth": grp["depth"].mean(), "beta": beta,
+                     "beta_x_depth": beta * grp["depth"].mean(), "n": len(grp)})
+    return pd.DataFrame(rows)
 
-df = pd.DataFrame(rows)
-print(df.to_string(index=False))
-df.to_csv("results/ofi_by_frequency.csv", index=False)
-b = make_buckets(book, freq="10s", tick=0.1)
-dq = depth_buckets(b)
-print(dq.to_string(index=False))
-dq.to_csv("results/depth_quintiles.csv", index=False)
+def cost_check(b, res, fee_ticks=0.0, train_frac=0.7):
+    d = b.dropna(subset=["ofi", "d_mid_next", "spread"])
+    test = d.iloc[int(len(d) * train_frac):]
+    side = np.sign(res["beta"] * test["ofi"])
+    realised = test["d_mid_next"] - test["d_mid_next"].mean()
+    traded = side != 0
+    gross = (side[traded] * realised[traded]).mean()
+    cost = test["spread"][traded].mean() + 2 * fee_ticks
+    return {"n_trades": int(traded.sum()), "hit_rate": float((side[traded] * realised[traded] > 0).mean()),
+            "gross_ticks": float(gross), "cost_ticks": float(cost), "net_ticks": float(gross - cost)}
