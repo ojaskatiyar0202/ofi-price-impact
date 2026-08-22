@@ -1,8 +1,8 @@
 # Order flow imbalance and short-horizon price impact
 
 We replicate Cont, Kukanov and Stoikov (2014) and examine whether order flow
-imbalance predicts short-horizon price movement, and whether any such prediction
-survives the cost of crossing the spread.
+imbalance predicts short-horizon price movement. We then compare the predicted
+move against the cost of crossing the spread.
 
 ## Order flow imbalance
 
