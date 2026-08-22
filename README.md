@@ -1,74 +1,69 @@
 # Order flow imbalance and short-horizon price impact
 
-We replicate Cont, Kukanov and Stoikov (2014) and then ask the question the paper
-does not: whether the relationship it documents is of any use to someone trying
-to trade on it.
+We replicate Cont, Kukanov and Stoikov (2014) and examine whether order flow
+imbalance predicts short-horizon price movement, and whether any such prediction
+survives the cost of crossing the spread.
 
-## The problem
+## Order flow imbalance
 
-Order flow imbalance measures the net pressure at the top of the book over some
+Order flow imbalance measures the net pressure at the top of the book over an
 interval. It is built from changes in the size resting at the best bid and ask
-rather than from trades, because a cancelled order removes liquidity exactly as a
-trade does, and from the book's perspective the two are indistinguishable. Trade
-data misses cancellations entirely, and in an electronic market most orders are
-cancelled rather than filled.
+rather than from trades. A cancelled order removes liquidity exactly as a trade
+does, and from the book's perspective the two are indistinguishable, so a measure
+built on trades alone misses most of what happens in an electronic market.
 
 For each update to the top of book the contribution is
 
     e_n =  1{P_bid_n >= P_bid_n-1} * q_bid_n  -  1{P_bid_n <= P_bid_n-1} * q_bid_n-1
          - 1{P_ask_n <= P_ask_n-1} * q_ask_n  +  1{P_ask_n >= P_ask_n-1} * q_ask_n-1
 
-The inequalities are weak, and this is what allows one expression to handle three
-cases. When the bid price does not change, both bid indicators fire and the
-expression reduces to the change in resting size. When the bid improves, only the
-first fires and the whole new size counts as inflow, which is correct because the
-previous level has not disappeared, it has merely stopped being the best. When
-the bid falls, only the second fires and the whole old size counts as outflow.
-The ask terms carry the opposite sign because supply at the ask pushes the price
-down.
+The inequalities are weak, which allows one expression to handle three cases.
+When the bid price does not change, both bid indicators fire and the expression
+reduces to the change in resting size. When the bid improves, only the first
+fires and the whole new size counts as inflow, since the previous level has not
+disappeared but has stopped being the best. When the bid falls, only the second
+fires and the whole old size counts as outflow. The ask terms carry the opposite
+sign because supply at the ask pushes the price down.
 
-Summing e_n over an interval gives the imbalance for that interval. The paper's
-claim is that the midprice change over the interval is close to linear in it,
-with a slope that scales like one over the average depth.
+Summing e_n over an interval gives the imbalance for that interval. The paper
+finds that the midprice change over the interval is close to linear in it, with a
+slope that scales like one over the average depth.
 
-## Contemporaneous is not predictive
+## Contemporaneous and predictive regressions
 
-The paper's regression measures flow and price change over the same interval. It
-is therefore a description of what happened rather than a forecast, since by the
-time the imbalance is observable the move has already occurred.
+The paper's regression measures flow and price change over the same interval, so
+it describes a move that has already occurred rather than forecasting one. We
+therefore also regress the price change over interval k+1 on the imbalance over
+interval k, and report both.
 
-The tradeable question is whether imbalance over interval k says anything about
-interval k+1. We run both regressions and report them together, because a high
-contemporaneous R-squared presented on its own would be misleading.
-
-There is a second hurdle beyond the statistical one. The midprice is a computed
-reference and not a price anyone will trade at, so a strategy acting on a
-predicted mid move must buy at the ask and sell at the bid, paying the full
-spread on a round trip. A prediction of two ticks against a two tick spread
-breaks even no matter how accurate it was.
+A predictive relationship would still have to clear the cost of trading on it.
+The midprice is a computed reference rather than a price anyone will transact at,
+so acting on a predicted mid move means buying at the ask and selling at the bid,
+paying the full spread over a round trip. A prediction of two ticks against a two
+tick spread breaks even regardless of its accuracy.
 
 ## Method
 
 Top of book is reconstructed into one row per change, with columns for the bid
 and ask price and the size resting at each. We sum e_n into fixed clock buckets
 and measure the midprice change in ticks from the end of one bucket to the end of
-the next. Prices are expressed in ticks throughout so that the price move and the
-cost of crossing the spread are directly comparable.
+the next. Prices are expressed in ticks so that the price move and the cost of
+crossing the spread are directly comparable.
 
 The regression is ordinary least squares with White standard errors, since
 bucketed order flow is strongly heteroskedastic and a bucket containing six
 hundred events behaves very differently from one containing twenty. The split is
-time ordered with no shuffling, and the out-of-sample R-squared applies the
+time ordered with no shuffling. The out-of-sample R-squared applies the
 coefficients fitted on the training block to the test block and measures against
-the test block's own mean. A model with no predictive content therefore scores at
-or below zero rather than merely close to it.
+the test block's own mean, so a model with no predictive content scores at or
+below zero.
 
 To test the depth claim we refit within depth quintiles. If impact scales like
 one over depth then the slope should fall as depth rises while the product of
 slope and depth stays roughly flat.
 
 Bucket length is a free parameter and the reported R-squared moves with it, so we
-run 1s, 10s and 30s and report all three rather than the most flattering one.
+run 1s, 10s and 30s and report all three.
 
 ## Data
 
@@ -82,9 +77,9 @@ The file is 84 MB compressed and is not committed. Download it, unzip into
 0.10 rather than the 0.01 typical of an equity, and `make_buckets` is called
 accordingly.
 
-Binance publishes bookTicker only for futures and not for spot, and the daily
-archives stop partway through 2024. The paper studies US equities, where order
-book data of this kind is not freely available.
+Binance publishes bookTicker for futures and not for spot, and the daily archives
+stop partway through 2024. The paper studies US equities, where order book data
+of this kind is not freely available.
 
 ## Results
 
@@ -126,15 +121,15 @@ Run from the repository root, since the data and results paths are relative to i
 
 ## Limitations
 
-The model has no cost check yet. The predictive regression is reported, but the
-comparison of gross edge against the round trip spread is not implemented, so the
-second argument above is currently made in prose rather than in numbers.
+The cost comparison is not implemented. The predictive regression is reported,
+but gross edge is not measured against the round trip spread, so that part of the
+question is currently addressed in prose only.
 
 Only level one is used, so imbalance deeper in the book is invisible. A large
 order sitting behind the touch changes how the price responds and does not appear
-in this data at all. The data also reports total size at each level rather than
-the number of orders composing it, so a level held by one participant and one
-held by fifty look identical.
+in this data. The data also reports total size at each level rather than the
+number of orders composing it, so a level held by one participant and one held by
+fifty are identical here.
 
 Buckets are fixed in clock time rather than in event count, so a quiet minute and
 a busy one carry equal weight in the regression despite containing very different
@@ -142,9 +137,8 @@ amounts of information.
 
 The instrument is a crypto perpetual future rather than a US equity. There is no
 opening or closing auction, trading runs continuously, and the funding mechanism
-that keeps the contract near spot has no equity analogue. The magnitudes here are
-therefore not directly comparable to the published figures even where the
-qualitative result holds.
+that keeps the contract near spot has no equity analogue. The magnitudes are not
+directly comparable to the published figures.
 
 ## Reference
 
