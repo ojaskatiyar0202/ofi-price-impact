@@ -109,6 +109,11 @@ We used futures rather than spot because Binance only publishes bookTicker for
 futures. It should be noted that Cont, Kukanov and Stoikov use US equities, but
 equity order book data was not available to us.
 
+The file is 84 MB and is not committed, since it can be downloaded from the link
+above. We unzipped it into `data/` and ran `analysis.py` from the repository root.
+The tick size on this contract is 0.10, not the 0.01 you would see on an equity, so
+`make_buckets` is called with that.
+
 ## Results
 
 | Bucket | Buckets | Contemporaneous R2 in | Contemporaneous R2 out | Predictive R2 out | Predictive t |
@@ -144,11 +149,10 @@ which the cost comparison below tests.
 | 10s | 0.560 | 11.21 | 1.09 | 10.12 |
 | 30s | 0.537 | 10.07 | 1.10 | 8.97 |
 
-**Discussion.** After paying the spread, the strategy makes money at all three bucket lengths.
-The gross figures are consistent with the reported R-squared: an eleven tick edge at ten seconds implies a
-next-bucket standard deviation of about 190 ticks, which is roughly $19 on Bitcoin
-at $70,000, or 48% annualised volatility. So the numbers agree with each other
-rather than pointing to an error.
+**Discussion.** After paying the spread, the strategy makes money at all three
+bucket lengths. The gross figures line up with the R-squared. An eleven tick edge at
+ten seconds implies the next bucket moves with a standard deviation of around 190
+ticks, or about 48% annualised, which is normal for Bitcoin.
 
 The thirty-second row looks contradictory. Out-of-sample R-squared is negative, so
 the fitted line predicts worse than just guessing the average, yet the strategy
