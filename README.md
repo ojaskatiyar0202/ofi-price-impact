@@ -12,24 +12,41 @@ rather than from trades. A cancelled order removes size just as a trade does, an
 the book looks the same either way, so a measure built on trades alone misses much
 of what happens.
 
+To give further intuition, size at the bid is demand and size at the ask is supply.
+Demand appearing pushes the price up and demand withdrawing pushes it down. Supply
+appearing pushes the price down and supply withdrawing pushes it up. Those four
+events are what the expression below counts, and their signs follow from that.
+
 For each update to the top of book, the contribution is
 
     e_n =  1{P_bid_n >= P_bid_n-1} * q_bid_n  -  1{P_bid_n <= P_bid_n-1} * q_bid_n-1
          - 1{P_ask_n <= P_ask_n-1} * q_ask_n  +  1{P_ask_n >= P_ask_n-1} * q_ask_n-1
 
 The inequalities are weak, which is what allows one expression to cover three
-cases. If the bid price is unchanged, both bid indicators equal one and the two
-bid terms become q_bid_n minus q_bid_n-1, the change in the size available at the
-bid. If the bid price has risen, only the first indicator holds, so the term is
-q_bid_n and the whole size at the new level counts as inflow. If the bid price has
-fallen, only the second holds, so the term is minus q_bid_n-1 and the whole size
-at the old level counts as outflow. The two ask terms work the same way with the
-inequalities reversed and the signs flipped, since size arriving at the ask is
-supply and pushes the price down.
+cases. Take the bid side; the ask works the same way, and the two are added
+together at the end.
 
-Summing e_n over an interval gives the imbalance for that interval. The paper
-finds that the midprice change over the interval is close to linear in it, with a
-slope that scales like one over the average depth.
+The price comparison decides which case applies, and the size is what gets counted
+in that case. If the price is unchanged, both indicators equal one and the two
+terms become q_n minus q_n-1, the change in size at that same price. If the price
+has risen, only the first indicator holds and the term is q_n, the whole size at
+the new level. The old size is not subtracted because it sits at a different price
+and that level still exists, one tick below. If the price has fallen, only the
+second holds and the term is minus q_n-1, the whole size at the level that is no
+longer best.
+
+The ask terms carry the inequalities reversed, and the signs flipped, since size
+arriving at the ask is supply and pushes the price down.
+
+Summing e_n over an interval gives the imbalance for that interval. The paper finds
+that the midprice change is roughly a constant times that imbalance, and that the
+constant scales by one over the average depth. Depth here means the average of the
+size at the best bid and the best ask. The idea is that the same imbalance matters
+more when there is less size sitting there. If 400 units are removed from an ask
+holding 500, the level is nearly cleared and the price has to move. If the ask were
+holding 10,000 the same 400 would be a 4% reduction. So the slope should be larger
+when there is less depth, and if the relationship is exactly one over depth, slope
+multiplied by depth would be constant.
 
 ## Contemporaneous and predictive regressions
 
@@ -52,22 +69,31 @@ measure the midprice change in ticks from the end of one bucket to the end of th
 next. Prices are in ticks so that the price move and the cost of crossing the
 spread are directly comparable.
 
-The regression is ordinary least squares with White standard errors, since bucketed
-order flow is strongly heteroskedastic and a bucket containing six hundred events
-behaves very differently from one containing twenty. The split is time ordered with
-no shuffling. The out-of-sample R-squared applies the coefficients fitted on the
-training block to the test block and measures against the test block's own mean, so
-a model with no predictive content scores at or below zero.
+The regression is ordinary least squares of the midprice change on the imbalance.
+The null hypothesis is that the coefficient on imbalance is zero, meaning order flow
+tells us nothing about the price. We reject it at the 5% level when the test statistic
+exceeds the critical value 1.96.
 
-To test the depth claim we refit within depth quintiles. If impact scales like one
+Standard errors use White's correction, because the size of the errors varies a lot
+across buckets: a bucket with six hundred events is far noisier than one with
+twenty, and the usual formula would understate the uncertainty.
+
+The training and test blocks are split by time with no shuffling, 70% and 30%. A
+random split would train on the afternoon to predict the morning. The out-of-sample
+figure takes the coefficients from the training block, applies them to the test
+block, and compares the result against simply predicting the test block's average.
+A model that adds nothing scores zero or below.
+
+To test the depth claim, we refit within depth quintiles. If impact scales like one
 over depth then the slope should fall as depth rises while the product of slope and
 depth stays roughly flat.
 
-For the cost comparison we take the fitted predictive coefficient, trade its sign on
+For the cost comparison, we take the fitted predictive coefficient, trade its sign on
 the test block, and measure the realised next-bucket move. That move is demeaned
 over the test block, so a strategy that happens to sit long through a rising market
-is not credited with the drift. Cost is the average spread over the buckets traded,
-which is what a round trip costs when both legs cross.
+is not credited with the drift.Cost is the average spread over the buckets traded.  The mid is a computed reference
+rather than an actual trading price, so a round trip means buying at the ask
+and selling at the bid, which pays the full spread once.
 
 Bucket length is a free parameter and the reported R-squared moves with it, so we
 run 1s, 10s and 30s and report all three.
@@ -79,13 +105,9 @@ Results below are from Binance BTCUSDT perpetual futures bookTicker for
 
     data.binance.vision/?prefix=data/futures/um/daily/bookTicker/BTCUSDT/
 
-The file is 84 MB compressed and is not committed. Download it, unzip into `data/`,
-and `analysis.py` runs unchanged. The tick size for this contract is 0.10 rather
-than the 0.01 typical of an equity, and `make_buckets` is called accordingly.
-
-Binance publishes bookTicker for futures and not for spot, and the daily archives
-stop partway through 2024. The paper studies US equities, where order book data of
-this kind is not freely available.
+We used futures rather than spot because Binance only publishes bookTicker for
+futures. It should be noted that Cont, Kukanov and Stoikov use US equities, but
+equity order book data was not available to us.
 
 ## Results
 
@@ -97,24 +119,22 @@ this kind is not freely available.
 
 **Discussion.** The contemporaneous relationship is strong and stable. R-squared
 rises from 0.57 at one second to 0.72 at ten, and the out-of-sample figure is
-slightly higher than the in-sample figure at every bucket length, so the fitted
-coefficients transfer to data they were not estimated on. The rise with bucket
-length is a measurement effect rather than a change in the relationship itself.
-Longer buckets contain more events, the noise in each partly cancels, and what is
-left is the systematic part. The gain flattens between ten and thirty seconds.
+slightly higher than the in-sample figure at every bucket length, so it seems 
+the relationship holds on the last 30% of the day as well. The rise with bucket length is a
+measurement effect rather than a change in the relationship itself. Longer buckets
+contain more events, the noise in each partly cancels, and what is left is the
+systematic part. The gain flattens between ten and thirty seconds.
 
 The predictive regression behaves differently. Out-of-sample R-squared falls from
 0.037 at one second to 0.005 at ten and to -0.004 at thirty, where the fitted line
 does slightly worse than predicting the test block's mean. The t-statistic follows
 the same path, from 30.7 to 3.8 to 0.9.
 
-The one second result needs care. A t-statistic of 30.7 across 86,396 buckets means
-the coefficient is not zero, and that much is secure. But the same regression
-explains 3.7% of the variation in the next second's price change. The relationship
-is statistically real and economically small, which are separate questions that a
-significance test alone does not settle. The fall across bucket lengths suggests
-the information in order flow is short lived: what exists at one second has mostly
-gone by ten and is absent by thirty.
+The one-second result is worth taking a closer look at. A t-statistic of 30.7 across 86,396 buckets means
+the coefficient is not zero, and that much is clear. But the same regression
+explains 3.7% of the variation in the next second's price change. The relationship is statistically significant but seems economically small. Whether a
+signal this weak is worth trading depends on what it costs to capitalise on it,
+which the cost comparison below tests.
 
 ### Cost comparison
 
@@ -124,28 +144,24 @@ gone by ten and is absent by thirty.
 | 10s | 0.560 | 11.21 | 1.09 | 10.12 |
 | 30s | 0.537 | 10.07 | 1.10 | 8.97 |
 
-**Discussion.** Net of the round trip spread the strategy is positive at all three
-bucket lengths, which was not the expected result. The gross figures are consistent
-with the reported R-squared: an eleven tick edge at ten seconds implies a
+**Discussion.**After paying the spread, the strategy makes money at all three bucket lengths.
+The gross figures are consistent with the reported R-squared: an eleven tick edge at ten seconds implies a
 next-bucket standard deviation of about 190 ticks, which is roughly $19 on Bitcoin
 at $70,000, or 48% annualised volatility. So the numbers agree with each other
 rather than pointing to an error.
 
-The thirty second row is worth reading closely. Out-of-sample R-squared is negative,
-so the fitted line is a worse point forecast than the test mean, yet the hit rate is
-0.537 and the gross edge is positive. Both can hold at once. R-squared penalises
-errors in magnitude, and a sign strategy does not use magnitude. The coefficient is
-too steep, predicting large moves where the realised moves are small, which destroys
-R-squared while leaving the direction weakly informative. Dismissing the signal on
-R-squared alone would give the wrong answer about its sign content.
+The thirty-second row looks contradictory. Out-of-sample R-squared is negative, so
+the fitted line predicts worse than just guessing the average, yet the strategy
+still makes money. The reason is that R-squared measures how close the predicted
+size of the move is, while the strategy only uses the direction. The coefficient is
+too large, so it predicts big moves where small ones happen, but it still gets the
+sign right more often than not.
 
-The cost model is optimistic, and the gap between it and a live strategy is where
-the real answer sits. It assumes the trade executes at the observed spread with no
-market impact, no delay between observing the bucket close and transacting, no queue
-position and no partial fills. It also ignores that the market makers being traded
-against see the same order flow. What the result shows is that the signal is real
-and the spread alone does not remove it, which moves the question from whether a
-signal exists to whether it survives execution.
+The cost model is optimistic, and whether it translates to an actual strategy is
+another question entirely. It assumes the trade executes at the observed spread with
+no market impact, no delay between observing the bucket close and transacting, no
+queue position and no partial fills. It also ignores that the market makers being
+traded against see the same order flow.
 
 ### Depth quintiles
 
@@ -169,8 +185,8 @@ top quintile, 35% above that mean. Fitting a power law across all five points gi
 a slope proportional to depth to the power -0.63 rather than -1, with an R-squared
 of 0.94 on the log-log fit.
 
-Depth scales impact systematically, then, but more weakly than one over depth on
-this instrument. Mean depth only ranges from 3.2 to 8.1 across the quintiles, which
+So depth does scale impact, but more weakly than one over depth. 
+Mean depth only ranges from 3.2 to 8.1 across the quintiles, which
 is a narrow range over which to identify an exponent, and the deviation sits in the
 quintile furthest from the rest. A wider set of instruments would test this better
 than one contract on one day.
@@ -192,24 +208,26 @@ Run from the repository root, since the data and results paths are relative to i
 ## Limitations
 
 The cost model assumes execution at the observed spread. It ignores market impact,
-delay, queue position and partial fills, all of which work against the strategy,
-and it assumes both legs cross rather than resting, which works in its favour.
+delay, queue position and partial fills, all of which work against the strategy. 
+It also assumes we always take the price on offer, the ask when buying and the bid
+when selling. Posting an order and waiting would get a better price, though it
+risks not being filled at all.
 
-Imbalance deeper in the book is invisible; that is to say, a large order sitting
-behind the touch changes how the price responds and does not appear in this data.
+Imbalance deeper in the book is invisible; that is to say, a large order sitting one
+or two levels down changes how the price responds and does not appear in this data.
 The data also reports total size at each level rather than the number of orders
-making it up, so a level held by one participant and one held by fifty are
-identical here.
+making it up, so a level held by one participant and one held by fifty are identical
+here.
 
-Buckets are fixed in clock time rather than in event count, so a quiet minute and a
-busy one carry equal weight in the regression despite containing very different
-amounts of information.
+Buckets are fixed in clock time rather than in event count, so a period with very
+few changes and one with many carry equal weight in the regression despite
+containing very different amounts of information.
 
-Results come from one instrument on one day, so the depth exponent in particular
-rests on a narrow cross section.
+Results come from one instrument on one day, so these figures can't be
+taken as characteristic of the market generally.
 
 The instrument is a crypto perpetual future rather than a US equity. There is no
-opening or closing auction, trading runs continuously, and the funding mechanism
+opening or closing auction; trading runs continuously, and the funding mechanism
 that keeps the contract near spot has no equity analogue. The magnitudes are not
 directly comparable to the published figures.
 
