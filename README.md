@@ -91,9 +91,9 @@ depth stays roughly flat.
 For the cost comparison, we take the fitted predictive coefficient, trade its sign on
 the test block, and measure the realised next-bucket move. That move is demeaned
 over the test block, so a strategy that happens to sit long through a rising market
-is not credited with the drift.Cost is the average spread over the buckets traded.  The mid is a computed reference
-rather than an actual trading price, so a round trip means buying at the ask
-and selling at the bid, which pays the full spread once.
+is not credited with the drift. Cost is the average spread over the buckets traded.
+The mid is a computed reference rather than an actual trading price, so a round trip
+means buying at the ask and selling at the bid, which pays the full spread once.
 
 Bucket length is a free parameter and the reported R-squared moves with it, so we
 run 1s, 10s and 30s and report all three.
@@ -144,7 +144,7 @@ which the cost comparison below tests.
 | 10s | 0.560 | 11.21 | 1.09 | 10.12 |
 | 30s | 0.537 | 10.07 | 1.10 | 8.97 |
 
-**Discussion.**After paying the spread, the strategy makes money at all three bucket lengths.
+**Discussion.** After paying the spread, the strategy makes money at all three bucket lengths.
 The gross figures are consistent with the reported R-squared: an eleven tick edge at ten seconds implies a
 next-bucket standard deviation of about 190 ticks, which is roughly $19 on Bitcoin
 at $70,000, or 48% annualised volatility. So the numbers agree with each other
@@ -223,7 +223,7 @@ Buckets are fixed in clock time rather than in event count, so a period with ver
 few changes and one with many carry equal weight in the regression despite
 containing very different amounts of information.
 
-Results come from one instrument on one day, so these figures can't be
+Results come from one instrument on one day, so these figures cannot be
 taken as characteristic of the market generally.
 
 The instrument is a crypto perpetual future rather than a US equity. There is no
