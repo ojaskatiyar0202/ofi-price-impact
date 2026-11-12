@@ -28,7 +28,7 @@ together at the end.
 
 The price comparison decides which case applies, and the size is what gets counted
 in that case. If the price is unchanged, both indicators equal one and the two
-terms become q_n minus q_n-1, the change in size at that same price. If the price
+terms become $q_n$ minus q_n-1, the change in size at that same price. If the price
 has risen, only the first indicator holds and the term is q_n, the whole size at
 the new level. The old size is not subtracted because it sits at a different price
 and that level still exists, one tick below. If the price has fallen, only the
