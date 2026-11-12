@@ -23,8 +23,10 @@ For each update to the top of book, the contribution is
 \large e_n = \mathbf{1}_{\{P_{b,n} \ge P_{b,n-1}\}}\, q_{b,n} - \mathbf{1}_{\{P_{b,n} \le P_{b,n-1}\}}\, q_{b,n-1} - \mathbf{1}_{\{P_{a,n} \le P_{a,n-1}\}}\, q_{a,n} + \mathbf{1}_{\{P_{a,n} \ge P_{a,n-1}\}}\, q_{a,n-1}
 ```
 
-where $P^b_n$ and $q^b_n$ are the best bid price and the size available at it after
-the $n$-th update, and $P^a_n$ and $q^a_n$ are the same for the ask. where $`\mathbf{1}_{\{\cdot\}}`$ is the indicator function, equal to one when the condition holds and zero otherwise.
+where $\mathbf{1}$ is the indicator function, equal to one when the condition in its
+subscript holds and zero otherwise, $P_{b,n}$ and $q_{b,n}$ are the best bid price and
+the size available at it after the $n$-th update, and $P_{a,n}$ and $q_{a,n}$ are the
+same for the ask.
 
 The inequalities are weak, which is what allows one expression to cover three
 cases. Take the bid side; the ask works the same way, and the two are added
@@ -32,11 +34,11 @@ together at the end.
 
 The price comparison decides which case applies, and the size is what gets counted
 in that case. If the price is unchanged, both indicators equal one and the two
-terms become $q^b_n - q^b_{n-1}$, the change in size at that same price. If the price
-has risen, only the first indicator holds and the term is $q^b_n$, the whole size at
+terms become $q_{b,n} - q_{b,n-1}$, the change in size at that same price. If the price
+has risen, only the first indicator holds and the term is $q_{b,n}$, the whole size at
 the new level. The old size is not subtracted because it sits at a different price
 and that level still exists, one tick below. If the price has fallen, only the
-second holds and the term is $-q^b_{n-1}$, the whole size at the level that is no
+second holds and the term is $-q_{b,n-1}$, the whole size at the level that is no
 longer best.
 
 The ask terms carry the inequalities reversed, and the signs flipped, since size
