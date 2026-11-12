@@ -20,10 +20,7 @@ events are what the expression below counts, and their signs follow from that.
 For each update to the top of book, the contribution is
 
 ```math
-\begin{aligned}
-e_n = {} & \mathbf{1}\{P^b_n \ge P^b_{n-1}\}\, q^b_n \;-\; \mathbf{1}\{P^b_n \le P^b_{n-1}\}\, q^b_{n-1} \\
-         & -\; \mathbf{1}\{P^a_n \le P^a_{n-1}\}\, q^a_n \;+\; \mathbf{1}\{P^a_n \ge P^a_{n-1}\}\, q^a_{n-1}
-\end{aligned}
+\large e_n = \mathbf{1}\{P^b_n \ge P^b_{n-1}\}\, q^b_n - \mathbf{1}\{P^b_n \le P^b_{n-1}\}\, q^b_{n-1} - \mathbf{1}\{P^a_n \le P^a_{n-1}\}\, q^a_n + \mathbf{1}\{P^a_n \ge P^a_{n-1}\}\, q^a_{n-1}
 ```
 
 where $P^b_n$ and $q^b_n$ are the best bid price and the size available at it after
