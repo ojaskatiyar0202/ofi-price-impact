@@ -20,11 +20,11 @@ events are what the expression below counts, and their signs follow from that.
 For each update to the top of book, the contribution is
 
 ```math
-\large e_n = \mathbf{1}_{\{P^b_n \ge P^b_{n-1}\}}\, q^b_n - \mathbf{1}\{P^b_n \le P^b_{n-1}\}\, q^b_{n-1} - \mathbf{1}\{P^a_n \le P^a_{n-1}\}\, q^a_n + \mathbf{1}\{P^a_n \ge P^a_{n-1}\}\, q^a_{n-1}
+\large e_n = \mathbf{1}_{\{P_{b,n} \ge P_{b,n-1}\}}\, q_{b,n} - \mathbf{1}_{\{P_{b,n} \le P_{b,n-1}\}}\, q_{b,n-1} - \mathbf{1}_{\{P_{a,n} \le P_{a,n-1}\}}\, q_{a,n} + \mathbf{1}_{\{P_{a,n} \ge P_{a,n-1}\}}\, q_{a,n-1}
 ```
 
 where $P^b_n$ and $q^b_n$ are the best bid price and the size available at it after
-the $n$-th update, and $P^a_n$ and $q^a_n$ are the same for the ask.
+the $n$-th update, and $P^a_n$ and $q^a_n$ are the same for the ask. where $`\mathbf{1}_{\{\cdot\}}`$ is the indicator function, equal to one when the condition holds and zero otherwise.
 
 The inequalities are weak, which is what allows one expression to cover three
 cases. Take the bid side; the ask works the same way, and the two are added
