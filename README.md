@@ -43,14 +43,21 @@ The ask terms carry the inequalities reversed, and the signs flipped, since size
 arriving at the ask can be thought of as quantity supplied and pushes the price down.
 
 Summing $e_n$ over an interval gives the imbalance for that interval. The paper finds
-that the midprice change is roughly a constant times that imbalance, and that the
-constant scales by one over the average depth. Depth here means the average of the
-size at the best bid and the best ask. The idea is that the same imbalance matters
-more when there is less size sitting there. If 400 units are removed from an ask
-holding 500, the level is nearly cleared and the price has to move. If the ask were
-holding 10,000 the same 400 would be a 4% reduction. So the slope should be larger
-when there is less depth, and if the relationship is exactly one over depth, slope
-multiplied by depth would be constant.
+that the midprice change, where the midprice is the average of the best bid and best
+ask prices, is roughly a constant times that imbalance, and that the constant is
+proportional to one over the average depth. Depth at update $n$ is the average of the
+size at the best bid and the best ask, and the depth of interval $k$ is its average
+over the $N_k$ updates in that interval:
+
+```math
+D_n = \frac{q_{b,n} + q_{a,n}}{2}, \qquad \bar{D}_k = \frac{1}{N_k} \sum_{n \in k} D_n
+```
+
+The idea is that an imbalance matters relative to the size already present at the
+best bid and ask. If 400 units are removed from an ask holding 500, the level is nearly cleared
+and the price has to move. If the ask were holding 10,000 the same 400 would be a 4%
+reduction. So the slope should be larger when there is less depth, and if the
+relationship is exactly one over depth, slope multiplied by depth would be constant.
 
 ## Contemporaneous and predictive regressions
 
