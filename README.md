@@ -28,20 +28,19 @@ the size available at it after the $n$-th update, and $P_{a,n}$ and $q_{a,n}$ ar
 same for the ask.
 
 The inequalities are weak, which is what allows one expression to cover three
-cases. Take the bid side; the ask works the same way, and the two are added
-together at the end.
+cases. Let us take the bid side and see how this works.
 
-The price comparison decides which case applies, and the size is what gets counted
-in that case. If the price is unchanged, both indicators equal one and the two
-terms become $q_{b,n} - q_{b,n-1}$, the change in size at that same price. If the price
-has risen, only the first indicator holds and the term is $q_{b,n}$, the whole size at
+We first compare whether our bid price has moved up, down or is unchanged. If the best bid price is unchanged,
+both bid terms apply, since an unchanged price satisfies both $\ge$ and $\le$. The contribution is then $q_{b,n} - q_{b,n-1}$, which can be thought of as the
+change in quantity demanded at that price. If the bid price
+rises, only the first indicator holds and the term is $q_{b,n}$, the whole size at
 the new level. The old size is not subtracted because it sits at a different price
-and that level still exists, one tick below. If the price has fallen, only the
+and that level still exists, one tick below. If the bid price has fallen, only the
 second holds and the term is $-q_{b,n-1}$, the whole size at the level that is no
 longer best.
 
 The ask terms carry the inequalities reversed, and the signs flipped, since size
-arriving at the ask is supply and pushes the price down.
+arriving at the ask can be thought of as quantity supplied and pushes the price down.
 
 Summing $e_n$ over an interval gives the imbalance for that interval. The paper finds
 that the midprice change is roughly a constant times that imbalance, and that the
