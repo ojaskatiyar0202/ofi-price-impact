@@ -19,8 +19,15 @@ events are what the expression below counts, and their signs follow from that.
 
 For each update to the top of book, the contribution is
 
-    e_n =  1{P_bid_n >= P_bid_n-1} * q_bid_n  -  1{P_bid_n <= P_bid_n-1} * q_bid_n-1
-         - 1{P_ask_n <= P_ask_n-1} * q_ask_n  +  1{P_ask_n >= P_ask_n-1} * q_ask_n-1
+```math
+\begin{aligned}
+e_n = {} & \mathbf{1}\{P^b_n \ge P^b_{n-1}\}\, q^b_n \;-\; \mathbf{1}\{P^b_n \le P^b_{n-1}\}\, q^b_{n-1} \\
+         & -\; \mathbf{1}\{P^a_n \le P^a_{n-1}\}\, q^a_n \;+\; \mathbf{1}\{P^a_n \ge P^a_{n-1}\}\, q^a_{n-1}
+\end{aligned}
+```
+
+where $P^b_n$ and $q^b_n$ are the best bid price and the size available at it after
+the $n$-th update, and $P^a_n$ and $q^a_n$ are the same for the ask.
 
 The inequalities are weak, which is what allows one expression to cover three
 cases. Take the bid side; the ask works the same way, and the two are added
@@ -28,17 +35,17 @@ together at the end.
 
 The price comparison decides which case applies, and the size is what gets counted
 in that case. If the price is unchanged, both indicators equal one and the two
-terms become $q_n$ minus q_n-1, the change in size at that same price. If the price
-has risen, only the first indicator holds and the term is q_n, the whole size at
+terms become $q^b_n - q^b_{n-1}$, the change in size at that same price. If the price
+has risen, only the first indicator holds and the term is $q^b_n$, the whole size at
 the new level. The old size is not subtracted because it sits at a different price
 and that level still exists, one tick below. If the price has fallen, only the
-second holds and the term is minus q_n-1, the whole size at the level that is no
+second holds and the term is $-q^b_{n-1}$, the whole size at the level that is no
 longer best.
 
 The ask terms carry the inequalities reversed, and the signs flipped, since size
 arriving at the ask is supply and pushes the price down.
 
-Summing e_n over an interval gives the imbalance for that interval. The paper finds
+Summing $e_n$ over an interval gives the imbalance for that interval. The paper finds
 that the midprice change is roughly a constant times that imbalance, and that the
 constant scales by one over the average depth. Depth here means the average of the
 size at the best bid and the best ask. The idea is that the same imbalance matters
@@ -52,8 +59,8 @@ multiplied by depth would be constant.
 
 The paper's regression measures flow and price change over the same interval, so
 it describes a move that has already happened rather than forecasting one. We
-therefore also regress the price change over interval k+1 on the imbalance over
-interval k, and report both.
+therefore also regress the price change over interval $k+1$ on the imbalance over
+interval $k$, and report both.
 
 A predictive relationship would still have to clear the cost of trading on it. The
 midprice is a computed reference rather than a price anyone will transact at, so
@@ -64,7 +71,7 @@ tick spread breaks even regardless of its accuracy.
 ## Method
 
 Top of book is reconstructed into one row per change, with columns for the bid and
-ask price and the size available at each. We sum e_n into fixed clock buckets and
+ask price and the size available at each. We sum $e_n$ into fixed clock buckets and
 measure the midprice change in ticks from the end of one bucket to the end of the
 next. Prices are in ticks so that the price move and the cost of crossing the
 spread are directly comparable.
@@ -116,7 +123,7 @@ The tick size on this contract is 0.10, not the 0.01 you would see on an equity,
 
 ## Results
 
-| Bucket | Buckets | Contemporaneous R2 in | Contemporaneous R2 out | Predictive R2 out | Predictive t |
+| Bucket | Buckets | Contemporaneous $R^2$ in | Contemporaneous $R^2$ out | Predictive $R^2$ out | Predictive $t$ |
 |---|---:|---:|---:|---:|---:|
 | 1s | 86,396 | 0.5739 | 0.5957 | 0.0372 | 30.67 |
 | 10s | 8,639 | 0.7116 | 0.7244 | 0.0054 | 3.81 |
@@ -124,7 +131,7 @@ The tick size on this contract is 0.10, not the 0.01 you would see on an equity,
 
 **Discussion.** The contemporaneous relationship is strong and stable. R-squared
 rises from 0.57 at one second to 0.72 at ten, and the out-of-sample figure is
-slightly higher than the in-sample figure at every bucket length, so it seems 
+slightly higher than the in-sample figure at every bucket length, so it seems
 the relationship holds on the last 30% of the day as well. The rise with bucket length is a
 measurement effect rather than a change in the relationship itself. Longer buckets
 contain more events, the noise in each partly cancels, and what is left is the
@@ -169,7 +176,7 @@ traded against see the same order flow.
 
 ### Depth quintiles
 
-| Quintile | Mean depth | Slope | Slope x depth | Buckets |
+| Quintile | Mean depth | Slope | Slope $\times$ depth | Buckets |
 |---|---:|---:|---:|---:|
 | 0 | 3.156 | 1.114 | 3.517 | 1,728 |
 | 1 | 4.080 | 0.948 | 3.867 | 1,728 |
@@ -186,10 +193,10 @@ The size of the effect does not match the paper's claim. Under exact one over de
 scaling the product of slope and depth would be constant. It holds across the first
 four quintiles, from 3.52 to 3.95 around a mean of 3.75, then rises to 5.07 in the
 top quintile, 35% above that mean. Fitting a power law across all five points gives
-a slope proportional to depth to the power -0.63 rather than -1, with an R-squared
-of 0.94 on the log-log fit.
+a slope proportional to $\text{depth}^{-0.63}$ rather than $\text{depth}^{-1}$, with an
+$R^2$ of 0.94 on the log-log fit.
 
-So depth does scale impact, but more weakly than one over depth. 
+So depth does scale impact, but more weakly than one over depth.
 Mean depth only ranges from 3.2 to 8.1 across the quintiles, which
 is a narrow range over which to identify an exponent, and the deviation sits in the
 quintile furthest from the rest. A wider set of instruments would test this better
@@ -212,7 +219,7 @@ Run from the repository root, since the data and results paths are relative to i
 ## Limitations
 
 The cost model assumes execution at the observed spread. It ignores market impact,
-delay, queue position and partial fills, all of which work against the strategy. 
+delay, queue position and partial fills, all of which work against the strategy.
 It also assumes we always take the price on offer, the ask when buying and the bid
 when selling. Posting an order and waiting would get a better price, though it
 risks not being filled at all.
